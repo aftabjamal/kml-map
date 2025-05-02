@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>TSJ KML Viewer</title>
+  <title>TSJ Map Viewer</title>
   <meta charset="utf-8" />
   <style>
     #map { height: 90vh; width: 100%; }
@@ -15,10 +15,9 @@
 <body>
   <h2>TSJ Map Viewer</h2>
   <div>
-    <button onclick="loadKML('TSJ.kml')">TSJ Site Boundary</button>
-    <button onclick="loadKML('TSJ DP.kml')">Drawl Point</button>
-    <button onclick="loadKML('TSJ DPWS C06SUB22.kml')">Watershed Boundary</button>
-    <button onclick="loadKML('TSJ DP BASIN.kml')">River Basin</button>
+    <button onclick="showTSJ()">TSJ</button>
+    <button onclick="loadStyledKML('TSJ DPWS C06SUB22.kml', 'black', false)">Watershed</button>
+    <button onclick="loadStyledKML('TSJ DP BASIN.kml', 'blue', false)">Basin</button>
   </div>
   <div id="map"></div>
 
@@ -28,17 +27,40 @@
       maxZoom: 19
     }).addTo(map);
 
-    var currentLayer = null;
+    var activeLayers = [];
 
-    function loadKML(url) {
-      if (currentLayer) {
-        map.removeLayer(currentLayer);
-      }
-      currentLayer = omnivore.kml(url)
+    function clearLayers() {
+      activeLayers.forEach(layer => map.removeLayer(layer));
+      activeLayers = [];
+    }
+
+    function loadStyledKML(url, color, fill = true, label = null) {
+      var layer = omnivore.kml(url)
         .on('ready', function() {
-          map.fitBounds(currentLayer.getBounds());
+          this.eachLayer(function(l) {
+            if (l.setStyle) {
+              l.setStyle({
+                color: color,
+                fillColor: fill ? color : 'transparent',
+                fillOpacity: fill ? 0.6 : 0,
+                weight: 2
+              });
+            }
+            if (label && l.getLatLng) {
+              L.marker(l.getLatLng()).bindPopup(label).addTo(map).openPopup();
+            }
+          });
+          map.fitBounds(this.getBounds());
         })
         .addTo(map);
+
+      activeLayers.push(layer);
+    }
+
+    function showTSJ() {
+      clearLayers();
+      loadStyledKML('TSJ.kml', 'red', true);
+      loadStyledKML('TSJ DP.kml', 'red', false, 'Drawl Point');
     }
   </script>
 </body>
